@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MICHIKO VCF</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+
+<style>
+:root{
+  --bg:#050508;
+  --card:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.08);
+  --text:#e8eaf0;
+  --muted:#94a3b8;
+  --accent:#00ff88;
+}
+
+.light{
+  --bg:#eef2f7;
+  --card:#ffffff;
+  --text:#111;
+  --muted:#666;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+}
+
+/* toggle */
+.toggle{
+  position:absolute;
+  top:15px;
+  right:15px;
+  cursor:pointer;
+  font-size:24px;
+}
+
+.logo{
+  width:90px;
+  height:90px;
+  border-radius:20px;
+  margin-bottom:10px;
+}
+
+.container{
+  width:90%;
+  max-width:500px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:30px;
+}
+
+h1{
+  text-align:center;
+  font-size:2.3rem;
+}
+
+.input-group{
+  display:flex;
+  align-items:center;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  margin:10px 0;
+}
+
+.flag{
+  margin-right:10px;
+}
+
+input{
+  background:none;
+  border:none;
+  outline:none;
+  color:var(--text);
+  width:100%;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#00ff88,#00cfff);
+  font-weight:700;
+  cursor:pointer;
+}
+
+.loader{
+  display:none;
+  text-align:center;
+}
+
+.spinner{
+  width:25px;
+  height:25px;
+  border:3px solid rgba(255,255,255,0.2);
+  border-top:3px solid #00ff88;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  margin:auto;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg);}
+}
+
+.progress-bar{
+  background:var(--border);
+  border-radius:10px;
+  margin-top:15px;
+}
+.progress{
+  height:10px;
+  background:var(--accent);
+  width:0%;
+  border-radius:10px;
+}
+
+.footer{
+  margin-top:20px;
+  text-align:center;
+}
+
+/* banner */
+.banner{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#00cfff;
+  padding:12px;
+  border-radius:10px;
+  transition:.4s;
+}
+.banner.hide{transform:translate(-50%,150%);}
+</style>
+</head>
+
+<body>
+
+<!-- 🌙 toggle -->
+<div class="toggle" onclick="toggleTheme()">
+  <span id="themeIcon" class="iconify" data-icon="solar:moon-bold"></span>
+</div>
+
+<img src="https://files.catbox.moe/ne3i3i.jpeg" class="logo">
+<h1>MICHIKO VCF</h1>
+
+<div class="container">
+
+  <div class="input-group">
+    <input id="name" placeholder="Name">
+  </div>
+
+  <div class="input-group">
+    <span class="flag" id="flag">🌍</span>
+    <input id="number" placeholder="234812..." oninput="detectCountry()">
+  </div>
+
+  <button onclick="submitData()">Save Contact</button>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <div>Saving...</div>
+  </div>
+
+  <h3 id="count">0 / 200</h3>
+
+  <div class="progress-bar">
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <button onclick="downloadVCF()">Download VCF</button>
+
+</div>
+
+<div class="footer">
+  <span class="iconify" data-icon="logos:youtube"></span>
+  <span class="iconify" data-icon="logos:whatsapp-icon"></span>
+  <span class="iconify" data-icon="logos:telegram"></span>
+</div>
+
+<div id="banner" class="banner">
+  Enter → Save → Count updates 🔥 (Swipe down)
+</div>
+
+<script>
+const maxUsers = 200;
+const channel = new BroadcastChannel("vcf");
+
+/* THEME */
+function toggleTheme(){
+ document.body.classList.toggle("light");
+ document.getElementById("themeIcon").setAttribute(
+  "data-icon",
+  document.body.classList.contains("light")
+   ? "solar:sun-bold"
+   : "solar:moon-bold"
+ );
+}
+
+/* LOAD */
+function getUsers(){
+ return JSON.parse(localStorage.getItem("vcf_users")||"[]");
+}
+
+function saveUsers(data){
+ localStorage.setItem("vcf_users", JSON.stringify(data));
+}
+
+/* COUNTRY DETECT */
+function detectCountry(){
+ const num = document.getElementById("number").value;
+
+ const map = {
+   "234":"🇳🇬",
+   "1":"🇺🇸",
+   "44":"🇬🇧",
+   "91":"🇮🇳"
+ };
+
+ let flag="🌍";
+ for(let code in map){
+   if(num.startsWith(code)){
+     flag = map[code];
+   }
+ }
+ document.getElementById("flag").innerText = flag;
+}
+
+/* UPDATE UI */
+function updateUI(){
+ const users = getUsers();
+ const count = users.length;
+ document.getElementById("count").innerText = `${count} / ${maxUsers}`;
+ document.getElementById("progress").style.width = (count/maxUsers)*100+"%";
+}
+
+/* SAVE */
+function submitData(){
+ const name = document.getElementById("name").value;
+ const number = document.getElementById("number").value.replace(/[^0-9]/g,'');
+
+ if(!name || !number) return alert("Fill all fields");
+
+ let users = getUsers();
+
+ if(users.some(u=>u.number===number)){
+  alert("Already saved");
+  return;
+ }
+
+ document.getElementById("loader").style.display="block";
+
+ users.push({name, number});
+ saveUsers(users);
+
+ setTimeout(()=>{
+  document.getElementById("loader").style.display="none";
+  updateUI();
+  channel.postMessage("update");
+
+  document.getElementById("name").value="";
+  document.getElementById("number").value="";
+ },500);
+}
+
+/* SYNC */
+channel.onmessage = ()=>updateUI();
+
+/* DOWNLOAD */
+function downloadVCF(){
+ let users = getUsers();
+
+ if(users.length < maxUsers){
+  alert("Not complete yet");
+  return;
+ }
+
+ let vcf="";
+ users.forEach(u=>{
+  vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:${u.name}\nTEL:${u.number}\nEND:VCARD\n`;
+ });
+
+ const blob = new Blob([vcf]);
+ const a = document.createElement("a");
+ a.href = URL.createObjectURL(blob);
+ a.download = "MICHIKO.vcf";
+ a.click();
+}
+
+/* BANNER */
+let banner = document.getElementById("banner");
+let startY=0;
+
+banner.addEventListener("touchstart",e=>{
+ startY=e.touches[0].clientY;
+});
+
+banner.addEventListener("touchmove",e=>{
+ if(e.touches[0].clientY-startY>50){
+  banner.classList.add("hide");
+ }
+});
+
+/* INIT */
+updateUI();
+</script>
+
+</body>
+</html>
