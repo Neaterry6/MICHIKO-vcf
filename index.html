@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MICHIKO VCF</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+
+<style>
+:root{
+  --bg:#050508;
+  --card:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.08);
+  --text:#e8eaf0;
+  --muted:#94a3b8;
+  --accent:#00ff88;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+}
+
+/* LOGO */
+.logo{
+  width:90px;
+  height:90px;
+  border-radius:20px;
+  margin-bottom:10px;
+  box-shadow:0 0 20px rgba(0,255,136,0.2);
+}
+
+/* CARD */
+.container{
+  width:90%;
+  max-width:500px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:30px;
+  backdrop-filter: blur(15px);
+}
+
+h1{
+  text-align:center;
+  font-size:2.3rem;
+  font-weight:800;
+}
+
+/* INPUT */
+.input-group{
+  display:flex;
+  align-items:center;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  margin:10px 0;
+}
+
+.flag{
+  font-size:20px;
+  margin-right:10px;
+}
+
+input{
+  background:none;
+  border:none;
+  outline:none;
+  color:var(--text);
+  width:100%;
+}
+
+/* BUTTON */
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#00ff88,#00cfff);
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* LOADING */
+.loader{
+  display:none;
+  text-align:center;
+  margin-top:10px;
+}
+
+.spinner{
+  width:25px;
+  height:25px;
+  border:3px solid rgba(255,255,255,0.2);
+  border-top:3px solid #00ff88;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  margin:auto;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg);}
+}
+
+/* PROGRESS */
+.progress-bar{
+  background:var(--border);
+  border-radius:10px;
+  margin-top:15px;
+}
+.progress{
+  height:10px;
+  background:var(--accent);
+  width:0%;
+  border-radius:10px;
+}
+
+/* STATUS */
+.status{
+  text-align:center;
+  font-size:13px;
+  color:var(--muted);
+  margin-top:8px;
+}
+
+/* FOOTER */
+.footer{
+  margin-top:20px;
+  text-align:center;
+  color:var(--muted);
+}
+.footer a{
+  color:#38bdf8;
+  text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+
+<img src="https://files.catbox.moe/ne3i3i.jpeg" class="logo">
+
+<h1>MICHIKO VCF</h1>
+
+<div class="container">
+
+  <div class="input-group">
+    <input id="name" placeholder="Name">
+  </div>
+
+  <div class="input-group">
+    <span class="flag" id="flag">🌍</span>
+    <input id="number" placeholder="+234..." oninput="detectCountry()">
+  </div>
+
+  <button onclick="submitData()">Save Contact</button>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <div class="status">Saving... please wait, adding to session</div>
+  </div>
+
+  <h3 id="count">0 / 200</h3>
+
+  <div class="progress-bar">
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <button onclick="downloadVCF()">Download VCF</button>
+
+</div>
+
+<div class="footer">
+
+  <p><strong>Channels:</strong></p>
+  <a href="https://youtube.com/@shefzytechinc?si=htx780zL8z7QFTzd">YouTube</a> |
+  <a href="https://whatsapp.com/channel/0029Vb7YExu8vd1W6ruYSI23">WhatsApp</a> |
+  <a href="https://t.me/michikoinc">Telegram</a>
+
+</div>
+
+<script>
+let users = [];
+const maxUsers = 200;
+
+/* COUNTRY DETECTION (IMPROVED) */
+function detectCountry(){
+  const num = document.getElementById("number").value;
+
+  const map = {
+    "+234":"🇳🇬",
+    "+1":"🇺🇸",
+    "+44":"🇬🇧",
+    "+91":"🇮🇳",
+    "+27":"🇿🇦",
+    "+233":"🇬🇭"
+  };
+
+  let flag="🌍";
+  for(let code in map){
+    if(num.startsWith(code)){
+      flag = map[code];
+      break;
+    }
+  }
+  document.getElementById("flag").innerText = flag;
+}
+
+/* FETCH USERS */
+async function fetchUsers(){
+ const res = await fetch("/api/contacts");
+ users = await res.json();
+ updateUI();
+}
+
+/* UPDATE UI */
+function updateUI(){
+ const count = users.length;
+ const percent = (count/maxUsers)*100;
+
+ document.getElementById("count").innerText = `${count} / ${maxUsers}`;
+ document.getElementById("progress").style.width = percent + "%";
+}
+
+/* SUBMIT */
+async function submitData(){
+ const name = document.getElementById("name").value;
+ const number = document.getElementById("number").value;
+
+ if(!name || !number) return alert("Fill all fields");
+
+ document.getElementById("loader").style.display="block";
+
+ const res = await fetch("/api/add", {
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({name, number})
+ });
+
+ await res.json();
+
+ document.getElementById("loader").style.display="none";
+
+ /* INSTANT UPDATE */
+ users.push({name, number});
+ updateUI();
+
+ document.getElementById("name").value="";
+ document.getElementById("number").value="";
+ document.getElementById("flag").innerText="🌍";
+}
+
+/* DOWNLOAD */
+function downloadVCF(){
+ if(users.length < maxUsers){
+  alert("Not complete yet");
+  return;
+ }
+
+ let vcf="";
+ users.forEach(u=>{
+  vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:${u.name}\nTEL:${u.number}\nEND:VCARD\n`;
+ });
+
+ const blob = new Blob([vcf]);
+ const a = document.createElement("a");
+ a.href = URL.createObjectURL(blob);
+ a.download = "MICHIKO.vcf";
+ a.click();
+}
+
+fetchUsers();
+setInterval(fetchUsers, 3000);
+</script>
+
+</body>
+</html>
