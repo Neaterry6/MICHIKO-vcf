@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> MICHIKO BOT VCF </title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<!-- ✅ Feather Icons -->
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+:root{
+  --bg:#eef2f7;
+  --card:#fff;
+  --text:#111;
+  --muted:#666;
+}
+
+.dark{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#fff;
+  --muted:#94a3b8;
+}
+
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.container{
+  width:340px;
+  background:var(--card);
+  border-radius:25px;
+  padding:25px;
+  text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+.icon{
+  width:80px;height:80px;
+  margin:auto;
+  border-radius:20px;
+  background:linear-gradient(135deg,#22c1c3,#3b82f6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.icon i{
+  width:40px;height:40px;color:white;
+}
+
+h2{margin:10px 0;color:var(--text);}
+p{color:var(--muted);font-size:13px;}
+
+.input{
+  margin-top:15px;
+  display:flex;
+  align-items:center;
+  background:#f1f5f9;
+  border-radius:12px;
+  padding:10px;
+  gap:10px;
+}
+
+.dark .input{background:#334155;}
+
+.input i{
+  width:20px;height:20px;color:var(--muted);
+}
+
+.input input{
+  border:none;
+  outline:none;
+  background:none;
+  width:100%;
+  font-size:16px;
+  color:var(--text);
+}
+
+button{
+  margin-top:15px;
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#22c1c3,#3b82f6);
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.counter{
+  margin-top:10px;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.toggle{
+  position:absolute;
+  top:15px;
+  right:15px;
+  cursor:pointer;
+}
+
+.toggle i{
+  width:22px;height:22px;color:var(--text);
+}
+
+/* banner */
+.banner{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:90%;
+  max-width:350px;
+  background:linear-gradient(135deg,#22c1c3,#3b82f6);
+  color:white;
+  padding:15px;
+  border-radius:15px;
+  box-shadow:0 5px 20px rgba(0,0,0,0.2);
+  transition:.4s;
+}
+
+.banner.hide{
+  transform:translate(-50%,150%);
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🌙 Toggle -->
+<div class="toggle" onclick="toggleTheme()">
+  <i data-feather="moon"></i>
+</div>
+
+<div class="container">
+  
+  <!-- 👤 Logo -->
+  <div class="icon">
+    <i data-feather="user"></i>
+  </div>
+
+  <h2> MICHIKO BOT</h2>
+  <p>Enter your WhatsApp number</p>
+
+  <div class="input">
+    <i data-feather="phone"></i>
+    <input id="number" placeholder="8123456789">
+  </div>
+
+  <button onclick="saveNumber()">Save Number</button>
+
+  <div class="counter">
+    Saved Users: <span id="count">0</span>
+  </div>
+
+</div>
+
+<div id="banner" class="banner">
+  Enter your number → Tap save → Count updates instantly  
+  <br><small>(Swipe down to close)</small>
+</div>
+
+<script>
+feather.replace(); 
+
+const countEl = document.getElementById('count');
+const channel = new BroadcastChannel('counter');
+
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+}
+
+function loadCount(){
+  const count = localStorage.getItem('count') || 0;
+  countEl.innerText = count;
+}
+loadCount();
+
+function saveNumber(){
+  const num = document.getElementById('number').value.replace(/[^0-9]/g,'');
+
+  if(!num){
+    alert("Enter number");
+    return;
+  }
+
+  let count = parseInt(localStorage.getItem('count')||0);
+  count++;
+  localStorage.setItem('count',count);
+
+  loadCount();
+  channel.postMessage(count);
+}
+
+channel.onmessage = (e)=>{
+  localStorage.setItem('count', e.data);
+  loadCount();
+};
+
+let banner = document.getElementById('banner');
+let startY = 0;
+
+banner.addEventListener('touchstart',e=>{
+  startY = e.touches[0].clientY;
+});
+
+banner.addEventListener('touchmove',e=>{
+  let moveY = e.touches[0].clientY;
+  if(moveY - startY > 50){
+    banner.classList.add('hide');
+  }
+});
+</script>
+
+</body>
+</html>
