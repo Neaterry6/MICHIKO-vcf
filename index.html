@@ -17,6 +17,7 @@
   --text:#e8eaf0;
   --muted:#94a3b8;
   --accent:#00ff88;
+  --pink:#ff4fa3;
 }
 
 .light{
@@ -36,7 +37,29 @@ body{
   align-items:center;
   justify-content:center;
   min-height:100vh;
+  transition:background .3s,color .3s;
 }
+
+/* loading screen */
+#loadingScreen{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+.loader-alias{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  border:6px solid rgba(255,255,255,0.2);
+  border-top:6px solid var(--pink);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 /* toggle */
 .toggle{
@@ -46,6 +69,42 @@ body{
   cursor:pointer;
   font-size:24px;
 }
+
+/* pink instruction card */
+.instruction-card{
+  position:absolute;
+  top:80px;
+  left:15px;
+  background:var(--pink);
+  color:#fff;
+  padding:12px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+  font-size:0.8rem;
+  max-width:180px;
+  transition:.4s;
+}
+.instruction-card h4{
+  margin:0 0 6px 0;
+  font-size:0.95rem;
+}
+.instruction-card p{
+  margin:0;
+  line-height:1.4;
+}
+.instruction-card button{
+  margin-top:6px;
+  background:#fff;
+  color:var(--pink);
+  border:none;
+  border-radius:8px;
+  padding:4px 8px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+/* swipe hide */
+.instruction-card.hide{transform:translateX(-250px);opacity:0;}
 
 .logo{
   width:90px;
@@ -61,6 +120,7 @@ body{
   border:1px solid var(--border);
   border-radius:20px;
   padding:30px;
+  transition:background .3s,border .3s;
 }
 
 h1{
@@ -98,7 +158,9 @@ button{
   background:linear-gradient(135deg,#00ff88,#00cfff);
   font-weight:700;
   cursor:pointer;
+  transition:opacity .2s;
 }
+button:hover{opacity:.9;}
 
 .loader{
   display:none;
@@ -115,47 +177,50 @@ button{
   margin:auto;
 }
 
-@keyframes spin{
-  to{transform:rotate(360deg);}
-}
-
 .progress-bar{
   background:var(--border);
   border-radius:10px;
   margin-top:15px;
+  overflow:hidden;
 }
 .progress{
   height:10px;
   background:var(--accent);
   width:0%;
   border-radius:10px;
+  transition:width .4s ease;
 }
 
 .footer{
   margin-top:20px;
   text-align:center;
 }
-
-/* banner */
-.banner{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#00cfff;
-  padding:12px;
-  border-radius:10px;
-  transition:.4s;
-}
-.banner.hide{transform:translate(-50%,150%);}
 </style>
 </head>
 
 <body>
 
+<!-- loading screen -->
+<div id="loadingScreen">
+  <div class="loader-alias"></div>
+</div>
+
 <!-- 🌙 toggle -->
 <div class="toggle" onclick="toggleTheme()">
   <span id="themeIcon" class="iconify" data-icon="solar:moon-bold"></span>
+</div>
+
+<!-- 📋 instruction card -->
+<div id="instruction" class="instruction-card">
+  <h4>Quick Guide</h4>
+  <p>
+    Enter your name and phone number.  
+    The flag updates automatically based on your country code.  
+    Save your contact to add it to the shared list.  
+    The counter and progress bar update live across all tabs.  
+    Once 200 contacts are saved, download the full VCF file.
+  </p>
+  <button onclick="hideInstruction()">✕ Close</button>
 </div>
 
 <img src="https://files.catbox.moe/ne3i3i.jpeg" class="logo">
@@ -169,7 +234,7 @@ button{
 
   <div class="input-group">
     <span class="flag" id="flag">🌍</span>
-    <input id="number" placeholder="234812..." oninput="detectCountry()">
+    <input id="number" placeholder="Enter number" oninput="detectCountry()">
   </div>
 
   <button onclick="submitData()">Save Contact</button>
@@ -195,10 +260,6 @@ button{
   <span class="iconify" data-icon="logos:telegram"></span>
 </div>
 
-<div id="banner" class="banner">
-  Enter → Save → Count updates 🔥 (Swipe down)
-</div>
-
 <script>
 const maxUsers = 200;
 const channel = new BroadcastChannel("vcf");
@@ -218,7 +279,6 @@ function toggleTheme(){
 function getUsers(){
  return JSON.parse(localStorage.getItem("vcf_users")||"[]");
 }
-
 function saveUsers(data){
  localStorage.setItem("vcf_users", JSON.stringify(data));
 }
@@ -226,14 +286,10 @@ function saveUsers(data){
 /* COUNTRY DETECT */
 function detectCountry(){
  const num = document.getElementById("number").value;
-
  const map = {
-   "234":"🇳🇬",
-   "1":"🇺🇸",
-   "44":"🇬🇧",
-   "91":"🇮🇳"
+   "234":"🇳🇬","1":"🇺🇸","44":"🇬🇧","91":"🇮🇳","81":"🇯🇵",
+   "49":"🇩🇪","33":"🇫🇷","39":"🇮🇹","55":"🇧🇷","61":"🇦🇺"
  };
-
  let flag="🌍";
  for(let code in map){
    if(num.startsWith(code)){
@@ -250,16 +306,14 @@ function updateUI(){
  document.getElementById("count").innerText = `${count} / ${maxUsers}`;
  document.getElementById("progress").style.width = (count/maxUsers)*100+"%";
 }
-
 /* SAVE */
 function submitData(){
- const name = document.getElementById("name").value;
+ const name = document.getElementById("name").value.trim();
  const number = document.getElementById("number").value.replace(/[^0-9]/g,'');
 
  if(!name || !number) return alert("Fill all fields");
 
  let users = getUsers();
-
  if(users.some(u=>u.number===number)){
   alert("Already saved");
   return;
@@ -274,7 +328,6 @@ function submitData(){
   document.getElementById("loader").style.display="none";
   updateUI();
   channel.postMessage("update");
-
   document.getElementById("name").value="";
   document.getElementById("number").value="";
  },500);
@@ -282,11 +335,13 @@ function submitData(){
 
 /* SYNC */
 channel.onmessage = ()=>updateUI();
+window.addEventListener("storage", e=>{
+ if(e.key==="vcf_users"){ updateUI(); }
+});
 
 /* DOWNLOAD */
 function downloadVCF(){
  let users = getUsers();
-
  if(users.length < maxUsers){
   alert("Not complete yet");
   return;
@@ -294,32 +349,42 @@ function downloadVCF(){
 
  let vcf="";
  users.forEach(u=>{
-  vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:${u.name}\nTEL:${u.number}\nEND:VCARD\n`;
+  vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:${u.name}\nN:${u.name};;;;\nTEL:${u.number}\nEND:VCARD\n`;
  });
 
- const blob = new Blob([vcf]);
+ const blob = new Blob([vcf], {type:"text/vcard"});
  const a = document.createElement("a");
  a.href = URL.createObjectURL(blob);
  a.download = "MICHIKO.vcf";
  a.click();
 }
 
-/* BANNER */
-let banner = document.getElementById("banner");
-let startY=0;
+/* INSTRUCTION CARD DISMISS */
+function hideInstruction(){
+ document.getElementById("instruction").classList.add("hide");
+}
 
-banner.addEventListener("touchstart",e=>{
+/* SWIPE TO DISMISS INSTRUCTION */
+let instruction = document.getElementById("instruction");
+let startY=0;
+instruction.addEventListener("touchstart",e=>{
  startY=e.touches[0].clientY;
 });
-
-banner.addEventListener("touchmove",e=>{
+instruction.addEventListener("touchmove",e=>{
  if(e.touches[0].clientY-startY>50){
-  banner.classList.add("hide");
+  instruction.classList.add("hide");
  }
 });
 
 /* INIT */
 updateUI();
+
+/* LOADING SCREEN REMOVE */
+window.addEventListener("load",()=>{
+ setTimeout(()=>{
+   document.getElementById("loadingScreen").style.display="none";
+ },1200); // show animation for ~1.2s
+});
 </script>
 
 </body>
